@@ -18,7 +18,8 @@ def test_is_instance():
     # print(isinstance(value, (int, float)))  # True, because 3.14 is a float
 
     # It returns True if the object is an instance of the specified class or type, and False otherwise.
-    # isinstance() is more flexible than using type() because it accounts for inheritance and can check against multiple types.
+    # isinstance() is more flexible than using type() because it accounts for inheritance
+    # and can check against multiple types.
 
     # [IMPORTANT]
     # print(type(my_dog) == Dog)  # True
@@ -27,8 +28,8 @@ def test_is_instance():
     # print(isinstance(my_dog, Animal))  # True because inheritance can be parent class
 
     # It is commonly used for type checking and validation in Python programs.
-    assert  isinstance('this is a string', str)
-    assert  not isinstance('10', int)
+    assert isinstance('this is a string', str)
+    assert not isinstance('10', int)
 
 
 def test_boolean():
@@ -156,5 +157,50 @@ def test_list():
     """
     assert not any(any_list)
 
+
+# ----------------------- pytest using object -----------------------
+import pytest
+
+class Employee:
+    def __init__(self, first_name: str, last_name: str, department: str, years: int):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.department = department
+        self.years = years
+
+# We can implement `fixture` to reuse and to share the same instance for each testing function.
+# In other words, pytest `fixture` allows us to be able to instantiate the object and then pass it
+# into out testing functionality.
+# This runs automatically behind the scene, and then it allows us to have a kind of some dependency to our test
+# which allows us less codes
+@pytest.fixture
+def default_employee():
+    return Employee("John", "Doe", "Engineering", 3)
+
+
+# We do not need to invoke `default_employee` because it works behind scene of `fixture`
+def test_employee_initialization(default_employee):
+    assert default_employee.first_name == "John", "First name should be John" # We can add a message
+    assert default_employee.last_name == "Doe", "Last name should be Doe" # We can add a message
+    assert default_employee.department == "Engineering"
+    assert default_employee.years == 3
+
+
+# Without `fixture` from pytest
+# Sample
+class Student:
+    def __init__(self, first_name: str, last_name: str, major: str, years: int):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.major = major
+        self.years = years
+
+
+def test_person_initialization():
+    p = Student("John", "Doe", "Computer Science", 3)
+    assert p.first_name == "John", "First name should be John" # We can add a message
+    assert p.last_name == "Doe", "Last name should be Doe" # We can add a message
+    assert p.major == "Computer Science"
+    assert p.years == 3
 
 

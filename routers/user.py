@@ -3,13 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
 from starlette import status
-
-from models import Todos, Users
-from database import SessionLocal
-from .auth import get_current_user
-from dtos.user_password import UserPassword
-from dtos.user import UserDto
 from passlib.context import CryptContext
+
+
+from ..models import Todos, Users
+from ..database import SessionLocal
+from .auth import get_current_user
+from ..dtos.user import UserDto
+from ..dtos.user_password import UserPassword
 
 
 router = APIRouter(

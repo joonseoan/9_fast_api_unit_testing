@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
-from models import Users
-from database import SessionLocal
-from dtos.user import UserDto
-from dtos.token import Token
+from ..models import Users
+from ..database import SessionLocal
+from ..dtos.user import UserDto
+from ..dtos.token import Token
 
 
 router = APIRouter(

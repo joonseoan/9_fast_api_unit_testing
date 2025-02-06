@@ -1,50 +1,12 @@
 from fastapi import status
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from fastapi.testclient import TestClient
-import pytest
 
-# Must use Base from 'database'
-from ..database import Base
+# Because `app` is imported in utils so we do not need to import it
 from ..main import app
 from ..routers.todos import get_db, get_current_user
-from ..models import Todos, Users
+# Because `Todos` is imported in utils so we do not need to import it
+from ..models import Todos
+from .utils import *
 
-# Set up test database for the endpoint testing
-
-# Creates a new database url
-SQLALCHEMY_DATABASE_URL = "postgresql://root:qwer123@localhost/unit_test"
-
-# Creates a new engine with a new SQLALCHEMY_DATABASE_URL for database connection
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    poolclass = StaticPool,
-)
-
-# be able to create a fully separate testing session that is isolated frm our production database
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Easy way to update, delete and recreate the `unit_test`
-# Since it moves to fixture function below for testing
-# Base.metadata.create_all(bind=engine)
-
-# override `def get_db():` in `todos.py`
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# mock (not override) a function of `get_current_user`
-def override_get_current_user():
-    return {
-        "username": "john",
-        "id": 1,
-        "role": "admin"
-    }
 
 """
     [dependency_overrides]
@@ -88,84 +50,6 @@ app.dependency_overrides[get_db] = override_get_db
 app.dependency_overrides[get_current_user] = override_get_current_user
 
 
-# Then we want to connect our client to our `TestClient` with our `app` inside.
-# Then, this `app` has now the replacement with overriden and mocked function
-client = TestClient(app)
-
-
-"""
-    fixture. This fixture is something that happens before the function is called
-"""
-@pytest.fixture
-def test_todo():
-    db = TestingSessionLocal()
-
-    # Dropping current database
-    Base.metadata.drop_all(bind=engine)
-    # For easy connection to database
-    Base.metadata.create_all(bind=engine)
-
-    user = Users(
-        email="john@example.com",
-        username="john",
-        first_name="Test",
-        last_name="User",
-        hashed_password="hashedpassword",
-        is_active=True,
-        role="admin",
-        id=1
-    )
-
-    db.add(user)
-    # Must commit first than todo
-    db.commit()
-
-    todo = Todos(
-        title = "Learn the python",
-        description = "Need to watch and practice codes everyday",
-        priority = 4,
-        complete = False,
-        # user id which should be matches up with the `id` in `override_get_current_user`
-        owner_id = 1,
-    )
-
-    # We do not need to implement dependency injection here
-    # So we can directly use `TestingSessionLocal`
-    db.add(todo)
-    db.commit()
-
-    # return todo
-    yield todo
-
-    # [IMPORTANT]
-    # engine.connect is from engine. In this case `engine.connect` is working
-    # no matter what the session life cycle is.
-    """
-    Why Not Use `db` to Delete the todos?
-    The reason the fixture doesn't use `db` to delete the todos is related to `database session lifecycle` and
-    `isolation between tests`.
-
-    Database Session Lifecycle:
-    The `db` object (TestingSessionLocal()) is a SQLAlchemy session that is created during the setup phase 
-    of the fixture.
-    
-    # [IMPORTANT]
-    Once the fixture yields the todo object, the session (db) is no longer in use.
-    If you try to use db in the teardown phase, it might not work as expected because the session
-    could already be closed or in an invalid state.
-
-    Isolation Between Tests:
-    Using engine.connect() to delete all rows in the todos table ensures that the database is cleaned up completely, 
-    regardless of the state of the db session.
-
-    This approach guarantees that each test starts with a clean database, which is critical for test isolation.
-    """
-    with engine.connect() as connection:
-        # delete all rows
-        connection.execute(text("DELETE FROM todos;"))
-        connection.execute(text("DELETE FROM users;"))
-        connection.commit()
-
 def test_find_all_authenticated(test_todo):
     response = client.get("/")
     assert response.status_code == status.HTTP_200_OK
@@ -184,5 +68,96 @@ def test_find_all_authenticated(test_todo):
         'description': 'Need to watch and practice codes everyday',
         'complete': False,
         'owner_id': 1,
-        'title': 'Learn the python', 'id': 1}
-    ]
+        'title': 'Learn the python', 'id': 1
+    }]
+
+
+def test_find_one_authenticated(test_todo):
+    # Need to param `/1`
+    response = client.get("/todo/1")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        'priority': 4,
+        'description': 'Need to watch and practice codes everyday',
+        'complete': False,
+        'owner_id': 1,
+        'title': 'Learn the python', 'id': 1
+    }
+
+
+def test_find_one_authenticated_not_found(test_todo):
+    # Need to param `/2`
+    response = client.get("/todo/2")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == { "detail": "Todo not found" }
+
+
+# CREATE
+def test_create_todo(test_todo):
+    request_data = {
+        "title": "new todo",
+        "description": "still pending this todo",
+        "priority": 5,
+        "complete": False,
+    }
+
+    # json=request_data is instead of `new_todo` in the endpoint
+    response = client.post("/todo/create", json=request_data)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Even though there is not action after creating a todo in the endpoint
+    # we can check further like
+    db = TestingSessionLocal()
+    # `id` should be 2 because `test_todo` already creates the first todo.
+    model = db.query(Todos).filter(Todos.id == 2).first()
+    assert model.title == request_data.get("title")
+    assert model.description == request_data.get("description")
+    assert model.priority == request_data.get("priority")
+    assert model.complete == request_data.get("complete")
+
+
+def test_update_todo(test_todo):
+    request_data = {
+        "title": "Change the current todo 1",
+        "description": "Want to change todo item with id 1",
+        "priority": 2,
+        "complete": False,
+    }
+
+    response = client.put("/todo/1", json=request_data)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    db = TestingSessionLocal()
+    model = db.query(Todos).filter(Todos.id == 1).first()
+    assert model.title == request_data.get("title")
+    assert model.description == request_data.get("description")
+    assert model.priority == request_data.get("priority")
+    assert model.complete == request_data.get("complete")
+
+
+def test_update_todo_not_found(test_todo):
+    request_data = {
+        "title": "Change the current todo 1",
+        "description": "Want to change todo item with id 1",
+        "priority": 2,
+        "complete": False,
+    }
+
+    response = client.put("/todo/2", json=request_data)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == { "detail": "Todo not found" }
+
+
+def test_delete_todo(test_todo):
+    response = client.delete("/todo/1")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    db = TestingSessionLocal()
+    model = db.query(Todos).filter(Todos.id == 1).first()
+    assert model is None
+
+
+def test_delete_todo_not_found(test_todo):
+    response = client.delete("/todo/2")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == { "detail": "Todo not found" }

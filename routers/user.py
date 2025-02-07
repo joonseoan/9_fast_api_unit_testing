@@ -34,6 +34,9 @@ bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @router.get("/", status_code=status.HTTP_200_OK)
 def me(user: user_dependency, db: db_dependency):
+    # During the py test, it is `user` overidden
+    print("user: ====> ", user)
+
     if user is None:
         raise HTTPException(status_code=401, detail="You are not logged in now")
 

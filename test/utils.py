@@ -10,6 +10,7 @@ from ..main import app
 # Must use Base from 'database'
 from ..database import Base
 from ..models import Todos, Users
+from ..routers.user import bcrypt_context
 
 
 # Set up test database for the endpoint testing
@@ -127,3 +128,27 @@ def test_todo():
         connection.execute(text("DELETE FROM users;"))
         connection.commit()
 
+
+@pytest.fixture
+def test_user():
+    user = Users(
+        email="john@example.com",
+        username="john",
+        first_name="Test",
+        last_name="User",
+        hashed_password=bcrypt_context.hash("hashpassword"),
+        is_active=True,
+        role="admin",
+        phone_number="1-111-111-1111",
+        id=1,
+    )
+
+    db = TestingSessionLocal()
+    db.add(user)
+    db.commit()
+
+    yield user
+
+    with engine.connect() as connection:
+        connection.execute(text("DELETE FROM users;"))
+        connection.commit()

@@ -15,21 +15,28 @@ from ..routers.user import bcrypt_context
 
 # Set up test database for the endpoint testing
 
+# Separately
 # Creates a new database url
 SQLALCHEMY_DATABASE_URL = "postgresql://root:qwer123@localhost/unit_test"
 
+
+# Separately
 # Creates a new engine with a new SQLALCHEMY_DATABASE_URL for database connection
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     poolclass = StaticPool,
 )
 
+
+# Separately
 # be able to create a fully separate testing session that is isolated frm our production database
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 # Easy way to update, delete and recreate the `unit_test`
 # Since it moves to fixture function below for testing
 # Base.metadata.create_all(bind=engine)
+
 
 # override `def get_db():` in `todos.py`
 def override_get_db():
@@ -52,6 +59,7 @@ def override_get_current_user():
 # Then we want to connect our client to our `TestClient` with our `app` inside.
 # Then, this `app` has now the replacement with overriden and mocked function
 client = TestClient(app)
+
 
 """
     fixture. This fixture is something that happens before the function is called

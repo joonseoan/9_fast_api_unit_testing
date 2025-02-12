@@ -17,10 +17,6 @@ def test_me(test_user):
     assert user.get("firstname") != "John"
 
 
-    # It is none because there is no fixture function
-    # assert response.json() is None
-
-
 def test_update_password(test_user):
     request_data = {
         "current_password": "hashpassword",

@@ -1,7 +1,6 @@
-from fastapi import status, HTTPException
+from fastapi import HTTPException
 from datetime import timedelta, datetime, timezone
 from jose import jwt
-import pytest
 
 
 from .utils import *
@@ -9,7 +8,6 @@ from ..routers.auth import get_db, authenticate_user, create_access_token, ALGOR
 
 
 app.dependency_overrides[get_db] = override_get_db
-# app.dependency_overrides[authenticate_user] =
 
 
 # [IMPORTANT]
@@ -54,6 +52,7 @@ def test_create_access_token(test_user):
 async def test_get_current_user(test_user):
     encode = {"sub": test_user.username, "id": test_user.id, "role": test_user.role}
     expires = datetime.now(timezone.utc) + timedelta(minutes=20)
+    # [IMPORTANT]
     encode.update({"exp": expires})
     token = jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -72,13 +71,8 @@ async def test_get_current_user_invalid(test_user):
     # encode.update({"exp": expires})
     token = jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
-    # if pytest has error??
-    # Next monday, why we need to use with
-    # also, how to iterperet with?/
-    # what is "pytest.raises(HTTPException)"?
-    # And please understand further try and catch  and how to inherit error in `get_current_user`?
+    # [IMPORTANT]
     with pytest.raises(HTTPException) as excinfig:
         await get_current_user(token=token)
-
-    assert excinfig.value.status_code == 401
-    assert excinfig.value.detail == "Could not validate the user"
+        assert excinfig.value.status_code == 401
+        assert excinfig.value.detail == "Could not validate the user"

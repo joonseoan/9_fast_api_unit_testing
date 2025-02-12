@@ -5,6 +5,7 @@ from sqlalchemy import text
 from fastapi.testclient import TestClient
 import pytest
 
+# app from base router
 from ..main import app
 
 # Must use Base from 'database'
@@ -83,7 +84,6 @@ def test_todo():
         hashed_password="hashedpassword",
         is_active=True,
         role="admin",
-        id=1
     )
 
     db.add(user)
@@ -99,8 +99,6 @@ def test_todo():
         owner_id=1,
     )
 
-    # We do not need to implement dependency injection here
-    # So we can directly use `TestingSessionLocal`
     db.add(todo)
     db.commit()
 
@@ -139,6 +137,27 @@ def test_todo():
 
 @pytest.fixture
 def test_user():
+    # [IMPORTANT]!!!!!
+    # To make sure the database cleanup. It required
+    """
+        Why is the id of the user 2 instead of 1?
+        Database State Persists Between Tests or Fixtures:
+
+        If another fixture or test creates a user in the database before your test_user fixture runs,
+        the id of the user created by test_user will increment (e.g., 2 instead of 1).
+
+        This happens because the database (e.g., PostgreSQL) auto-increments the id field for each new row,
+        and it doesn't reset between tests unless explicitly handled.
+
+        Concurrent Test Execution:
+        If tests are running in parallel or fixtures are shared across multiple tests,
+        the database might have multiple users created simultaneously, leading to unexpected id values.
+    """
+    # Dropping current database
+    Base.metadata.drop_all(bind=engine)
+    # For easy connection to database
+    Base.metadata.create_all(bind=engine)
+
     user = Users(
         email="john@example.com",
         username="john",
@@ -148,7 +167,6 @@ def test_user():
         is_active=True,
         role="admin",
         phone_number="1-111-111-1111",
-        id=1,
     )
 
     db = TestingSessionLocal()

@@ -68,7 +68,8 @@ def test_find_all_authenticated(test_todo):
         'description': 'Need to watch and practice codes everyday',
         'complete': False,
         'owner_id': 1,
-        'title': 'Learn the python', 'id': 1
+        'title': 'Learn the python',
+        'id': 1
     }]
 
 
@@ -81,7 +82,8 @@ def test_find_one_authenticated(test_todo):
         'description': 'Need to watch and practice codes everyday',
         'complete': False,
         'owner_id': 1,
-        'title': 'Learn the python', 'id': 1
+        'title': 'Learn the python',
+        'id': 1
     }
 
 
@@ -99,13 +101,15 @@ def test_create_todo(test_todo):
         "description": "still pending this todo",
         "priority": 5,
         "complete": False,
+        "owner_id": 1,
     }
 
-    # json=request_data is instead of `new_todo` in the endpoint
+    # [IMPORTANT]
+    # `json=request_data` is instead of `new_todo` in the endpoint
     response = client.post("/todo/create", json=request_data)
     assert response.status_code == status.HTTP_201_CREATED
 
-    # Even though there is not action after creating a todo in the endpoint
+    # Even though there is no action or return value after creating a todo in the endpoint
     # we can check further like
     db = TestingSessionLocal()
     # `id` should be 2 because `test_todo` already creates the first todo.
@@ -122,6 +126,7 @@ def test_update_todo(test_todo):
         "description": "Want to change todo item with id 1",
         "priority": 2,
         "complete": False,
+        "owner_id": 1,
     }
 
     response = client.put("/todo/1", json=request_data)
@@ -141,6 +146,7 @@ def test_update_todo_not_found(test_todo):
         "description": "Want to change todo item with id 1",
         "priority": 2,
         "complete": False,
+        "owner_id": 1,
     }
 
     response = client.put("/todo/2", json=request_data)

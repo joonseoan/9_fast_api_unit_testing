@@ -45,10 +45,13 @@ def me(user: user_dependency, db: db_dependency):
 
 @router.patch("/password_update", status_code=status.HTTP_204_NO_CONTENT)
 def update_password(user: user_dependency, db: db_dependency, updated_password: UserPassword):
+    print("user in update_password:", user)
     if user is None:
         raise HTTPException(status_code=401, detail="not possible to change password")
 
     current_user = db.query(Users).filter(Users.id == user.get("id")).first()
+    print("current_user in update_password:", current_user)
+
 
     if not bcrypt_context.verify(updated_password.current_password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="The current password is not identical")
